@@ -3,9 +3,11 @@ USE sakila;
 
 -- 1. List the number of films per category.
 
-SELECT category_id, COUNT(film_id) AS number_of_films
-FROM film_category
-GROUP BY category_id;
+SELECT c.name, COUNT(f.film_id) AS number_of_films
+FROM film_category as f
+JOIN category as c
+ON f.category_id = c.category_id
+GROUP BY c.category_id;
 
 -- 2. Retrieve the store ID, city, and country for each store.
 
@@ -30,7 +32,7 @@ GROUP BY s.store_id;
 
 -- 4. Determine the average running time of films for each category.
 
-SELECT category_id, ROUND(AVG(f.length),0) AS average_length
+SELECT category_id, ROUND(AVG(f.length),2) AS average_length
 FROM film_category AS c
 JOIN film AS f
 ON c.film_id = f.film_id
@@ -40,12 +42,14 @@ ORDER BY average_length DESC;
 -- Bonus:
 -- 5. Identify the film categories with the longest average running time.
 
-WITH avg_length AS (SELECT category_id, AVG(f.length) AS average_length
+WITH avg_length AS (SELECT ca.name, c.category_id, AVG(f.length) AS average_length
 					FROM film_category AS c
 					JOIN film AS f
 					ON c.film_id = f.film_id
+                    JOIN category as ca
+                    ON c.category_id = ca.category_id
 					GROUP BY category_id)
-SELECT category_id, ROUND(average_length, 0) AS maximum_length
+SELECT name, ROUND(average_length, 0) AS maximum_length
 FROM avg_length
 WHERE average_length = (SELECT MAX(average_length) FROM avg_length);
 
@@ -63,7 +67,9 @@ HAVING f.title LIKE 'ACADEMY DINOSAUR' AND i.store_id = 1;
 
 SELECT 	f.title,
 		COUNT(i.inventory_id) AS number_of_available_films,
-		CASE WHEN COUNT(i.inventory_id) != 0 THEN 'In inventory' ELSE 'Not in inventory' END AS inventory_availability
+		IFNULL(CASE 
+				WHEN COUNT(i.inventory_id) != 0 THEN 'In inventory' 
+                ELSE 'Not in inventory' END, 'Not in inventory') AS inventory_availability
 FROM film AS f
 LEFT JOIN inventory AS i
 ON f.film_id = i.film_id
